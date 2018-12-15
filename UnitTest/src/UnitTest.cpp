@@ -11,25 +11,66 @@
 #include <set>
 #include <string>
 #include <cassert>
+#include <exception>
+#include <sstream>
 
 using namespace std;
 
 using Synonyms = map<string, set<string>>;
 
-void Test(){
-
+template<class T>
+void AssertEqual(const T& t, const T& u, const int& hint){
+	if (t != u){
+		stringstream ss;
+		ss << "Assert failed: " << t << " != " << u << ", hint: " << hint;
+		throw runtime_error(ss.str());
+	}
 }
+
+template<class T, class U>
+ostream& operator<<(ostream& stream, const map<T, U>& m){
+	stream << "{" << endl;
+	for (const auto& item: m){
+		stream << item.first << ": " << item.second << ";" << endl;
+	}
+	stream << "}";
+	return stream;
+}
+
+template<class T>
+ostream& operator<<(ostream& stream, const set<T>& s){
+	stream << "[";
+	for (const auto& item: s){
+		stream << item << ",";
+	}
+	stream << "]";
+	return stream;
+}
+
+class TestRunner{
+public:
+	template<class TypeFunc>
+	void RunTest(TypeFunc func, const string& testName){
+		try { // шаблонный метод класса
+			func();
+			cout << testName << " OK" << endl;
+		}
+		catch(runtime_error& e){
+			cout << testName << " fail: " << e.what() << endl;
+		}
+	}
+};
 
 int Sum (int x, int y){
 	return x + y;
 }
 
 void TestSum(){ // набор тестов для функции Sum
-	assert(Sum(2, 3) == 5); // мы ожидаем что 2+3 = 5
-	assert(Sum(-2, -3) == -5); // проверка отрицательных чисел
-	assert(Sum(-2, 8) == 6); // проверка - +
-	assert(Sum(0, -2) == -2); // проверка нуля
-	assert(Sum(-2, 2) == 0); // проверка нуля 2
+	AssertEqual(Sum(2, 3), 4, __LINE__); // мы ожидаем что 2+3 = 5
+	AssertEqual(Sum(-2, -3), -5, __LINE__); // проверка отрицательных чисел
+	AssertEqual(Sum(-2, 8), 6, __LINE__); // проверка - +
+	AssertEqual(Sum(0, -2), -2, __LINE__); // проверка нуля
+	AssertEqual(Sum(-2, 2), 0, __LINE__); // проверка нуля 2
 	cout << "Test Sum OK" << endl;
 }
 
@@ -52,11 +93,12 @@ void TestAddSynonyms(){
 	{
 		Synonyms empty;
 		AddSynonyms(empty, "a", "b");
+
 		const Synonyms expected  = {
-				{"a", {"b"}}, // Ожидаем, что в map, будет 2 записи
+				{"a", {"b", "c"}}, // Ожидаем, что в map, будет 2 записи
 				{"b", {"a"}}
 		};
-		assert(empty == expected);
+		AssertEqual(empty, expected, __LINE__);
 	}
 
 	{
@@ -71,7 +113,7 @@ void TestAddSynonyms(){
 						{"b", {"a", "c"}},
 						{"c", {"b", "a"}}
 				};
-		assert(synonyms == expected);
+		AssertEqual(synonyms, expected,__LINE__);
 	}
 	cout << "TestAddSynonyms OK" << endl;
 }
@@ -91,7 +133,6 @@ void TestCount(){ // Test Count
 		assert(CountSynonym(synonyms, "b")==2);
 		assert(CountSynonym(synonyms, "c")==1);
 	}
-	cout << "TestCount OK" << endl;
 }
 
 void TestAreSynonyms(){
@@ -114,7 +155,6 @@ void TestAreSynonyms(){
 		assert(!AreSynonyms(synonyms, "c", "a"));
 		assert(!AreSynonyms(synonyms, "a", "c"));
 	}
-	cout << "TestAreSynonyms OK" << endl;
 }
 
 void TestAll(){
@@ -157,6 +197,11 @@ void Synon(){
 }
 
 int main() {
-	TestAll();
+	TestRunner tr;
+	tr.RunTest(TestAddSynonyms, "TestAddSynonyms");
+	tr.RunTest(TestCount, "TestCount");
+	tr.RunTest(TestAreSynonyms, "TestAreSynonyms");
+
+	cout << "ololo" << endl;
 	return 0;
 }
